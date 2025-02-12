@@ -2,14 +2,18 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFFER_SIZE 1024//im not sure about what size this needs to be
-
-struct huff_node {
+typedef struct huff_node {
     struct huff_node *zero;
     struct huff_node *one;
     char *s_zero;
     char *s_one;
-};
+} Huff_node;
+
+void searchTree(char *string, char *bitSeq, Huff_node leaf){
+    // if(bitSeq == "\0"){
+    //     leaf.
+    // }
+}
 
 int main(int argc, char const *argv[])
 {
@@ -21,10 +25,6 @@ int main(int argc, char const *argv[])
 
     printf("1st file: %s\n2nd File: %s\n", argv[1], argv[2]);
 
-    
-
-    
-
     FILE *code = fopen(argv[1], "r");
 
     if(!code){
@@ -32,9 +32,7 @@ int main(int argc, char const *argv[])
     }
 
     fseek(code, 0, SEEK_END);
-    
     long fileSize = ftell(code);
-
     char *buffer = malloc(fileSize + 1);
 
     rewind(code);
@@ -45,6 +43,12 @@ int main(int argc, char const *argv[])
 
     char string[10001] = "";
     char bitSeq[10001] = "";
+
+    Huff_node *root = malloc(sizeof(Huff_node));
+    root->one = NULL;
+    root->zero = NULL;
+    root->s_one = NULL;
+    root->s_zero = NULL;
 
     for(size_t i = 0; i < bytesRead; i++){
         //printf("Byte %zu: %c (%d)\n", i, buffer[i], buffer[i]);
