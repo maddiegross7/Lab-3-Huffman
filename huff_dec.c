@@ -9,21 +9,23 @@ typedef struct huff_node {
     char *s_one;
 } Huff_node;
 
-void searchTree(char *string, char *bitSeq, Huff_node leaf){
-    // if(bitSeq == "\0"){
-    //     leaf.
-    // }
+Huff_node* createHuffNode(){
+    Huff_node *newNode = malloc(sizeof(Huff_node));
+
+    newNode->one = NULL;
+    newNode->zero = NULL;
+    newNode->s_one = NULL;
+    newNode->s_zero = NULL;
+
+    return newNode;
 }
+
 
 int main(int argc, char const *argv[])
 {
-    /* code */
-
     if(argc != 3){
         fprintf(stderr, "you do not have the correct number of arguments");
     }
-
-    printf("1st file: %s\n2nd File: %s\n", argv[1], argv[2]);
 
     FILE *code = fopen(argv[1], "r");
 
@@ -39,19 +41,16 @@ int main(int argc, char const *argv[])
 
     size_t bytesRead = fread(buffer, 1, fileSize, code);
 
-    fwrite(buffer, 1, bytesRead, stdout);
+    //maybe error check if file is big enough
 
     char string[10001] = "";
-    char bitSeq[10001] = "";
 
-    Huff_node *root = malloc(sizeof(Huff_node));
-    root->one = NULL;
-    root->zero = NULL;
-    root->s_one = NULL;
-    root->s_zero = NULL;
+    Huff_node *root = createHuffNode();
+
+    Huff_node *current = root;
 
     for(size_t i = 0; i < bytesRead; i++){
-        //printf("Byte %zu: %c (%d)\n", i, buffer[i], buffer[i]);
+        current = root;
         int stringSizeCount = 0;
         while(buffer[i] != '\0'){
             string[stringSizeCount] = buffer[i];
@@ -59,19 +58,53 @@ int main(int argc, char const *argv[])
             i++;
         }
         string[stringSizeCount] = '\0';
-        //printf("string?: %s\n", string);
         i++;
 
         int bitSeqSizeCount = 0;
         while(buffer[i] != '\0'){
-            //printf("hello");
-            bitSeq[bitSeqSizeCount] = buffer[i];
             bitSeqSizeCount++;
+            if(buffer[i] == '1'){
+                if(buffer[i+1] == '\0'){
+                    current->s_one = strdup(string);
+                }else if(current->one == NULL){
+                    current->one = createHuffNode();
+                }else{
+                    current = current->one;
+                }
+            }else if (buffer[i] == '0'){
+                if(buffer[i+1] == '\0'){
+                    current->s_zero = strdup(string);
+                }else if(current->zero == NULL){
+                    current->zero = createHuffNode();
+                }else {
+                    current = current->zero;
+                }
+            }
             i++;
         }
-        bitSeq[bitSeqSizeCount] = '\0';
-        printf("bitSeq?: %s\n", bitSeq);
     }
+
+    free(buffer);
+
+
+    FILE *encoded = fopen(argv[2], "r");
+
+    if(!code){
+        fprintf(stderr, "Error opening file: %s", argv[2]);
+    }
+
+    fseek(encoded, 0, SEEK_END);
+    fileSize = ftell(encoded);
+    char *diffBuffer = malloc(fileSize + 1);
+
+    rewind(encoded);
+
+    bytesRead = fread(diffBuffer, 1, fileSize, encoded);
+
+    for(size_t i = 0; i < bytesRead; i++){
+        
+    }
+
 
 
     return 0;
