@@ -44,10 +44,10 @@ int main(int argc, char const *argv[])
     fwrite(buffer, 1, bytesRead, stdout);
 
     char string[10001] = "";
-    // char *bitSeq[10001];
+    char bitSeq[10001] = "";
 
     for(size_t i = 0; i < bytesRead; i++){
-        printf("Byte %zu: %c (%d)\n", i, buffer[i], buffer[i]);
+        //printf("Byte %zu: %c (%d)\n", i, buffer[i], buffer[i]);
         int stringSizeCount = 0;
         while(buffer[i] != '\0'){
             string[stringSizeCount] = buffer[i];
@@ -55,7 +55,18 @@ int main(int argc, char const *argv[])
             i++;
         }
         string[stringSizeCount] = '\0';
-        printf("string?: %s\n", string);
+        //printf("string?: %s\n", string);
+        i++;
+
+        int bitSeqSizeCount = 0;
+        while(buffer[i] != '\0'){
+            //printf("hello");
+            bitSeq[bitSeqSizeCount] = buffer[i];
+            bitSeqSizeCount++;
+            i++;
+        }
+        bitSeq[bitSeqSizeCount] = '\0';
+        printf("bitSeq?: %s\n", bitSeq);
     }
 
 
