@@ -2,11 +2,15 @@
 #include <string.h>
 #include <stdlib.h>
 
+//./bin/huff_dec data/celebrate-code.txt data/celebrate-encoded.txt  
+
 typedef struct huff_node {
     struct huff_node *zero;
     struct huff_node *one;
     char *s_zero;
     char *s_one;
+    char *bitSequence0;
+    char *bitSequence1;
 } Huff_node;
 
 Huff_node* createHuffNode(){
@@ -16,14 +20,74 @@ Huff_node* createHuffNode(){
     newNode->zero = NULL;
     newNode->s_one = NULL;
     newNode->s_zero = NULL;
+    newNode->bitSequence0 = NULL;
+    newNode->bitSequence1 = NULL;
 
     return newNode;
 }
 
 int getBitFromByte(int pos, unsigned char character){
     int bit = ((character >> pos) & 1);
-    printf("bit: %i\n", bit);
+    //printf("bit: %i\n", bit);
     return bit;
+}
+
+
+// Queue structure for BFS
+typedef struct queue_node {
+    Huff_node *node;
+    struct queue_node *next;
+} QueueNode;
+
+typedef struct {
+    QueueNode *front;
+    QueueNode *rear;
+} Queue;
+
+void enqueue(Queue *q, Huff_node *node) {
+    QueueNode *newNode = malloc(sizeof(QueueNode));
+    newNode->node = node;
+    newNode->next = NULL;
+    if (q->rear) {
+        q->rear->next = newNode;
+    } else {
+        q->front = newNode;
+    }
+    q->rear = newNode;
+}
+
+Huff_node *dequeue(Queue *q) {
+    if (!q->front) return NULL;
+    QueueNode *temp = q->front;
+    Huff_node *node = temp->node;
+    q->front = q->front->next;
+    if (!q->front) q->rear = NULL;
+    free(temp);
+    return node;
+}
+
+int isQueueEmpty(Queue *q) {
+    return q->front == NULL;
+}
+
+void bfsPrint(Huff_node *root) {
+    if (!root) return;
+    Queue q = {NULL, NULL};
+    enqueue(&q, root);
+    while (!isQueueEmpty(&q)) {
+        Huff_node *current = dequeue(&q);
+        printf("Node at %p\n", (void*)current);
+        if (current->s_zero) printf("  s_zero: %s, bitSequence:%s\n", current->s_zero, current->bitSequence0);
+        if (current->s_one) printf("  s_one: %s, bitSequence:%s\n", current->s_one, current->bitSequence1);
+        if (current->zero) {
+            printf("  Has zero child\n");
+            enqueue(&q, current->zero);
+        }
+        if (current->one) {
+            printf("  Has one child\n");
+            enqueue(&q, current->one);
+        }
+    }
 }
 
 
@@ -50,6 +114,7 @@ int main(int argc, char const *argv[])
     //maybe error check if file is big enough
 
     char string[10001] = "";
+    char bitSeq[10001] = "";
 
     Huff_node *root = createHuffNode();
 
@@ -60,6 +125,7 @@ int main(int argc, char const *argv[])
         
         int stringSizeCount = 0;
         while(buffer[i] != '\0'){
+            //printf("buffer[i] %s\n", buffer[i]);
             string[stringSizeCount] = buffer[i];
             stringSizeCount++;
             i++;
@@ -69,29 +135,50 @@ int main(int argc, char const *argv[])
 
         int bitSeqSizeCount = 0;
         while(buffer[i] != '\0'){
+            //printf("buffer[i] %c\n", buffer[i]);
+            bitSeq[bitSeqSizeCount] = buffer[i];
             bitSeqSizeCount++;
+            bitSeq[bitSeqSizeCount] = '\0';
             if(buffer[i] == '1'){
+                // printf("buffer value is 1\n");
+                // if(buffer[i+1]){
+                //     printf("buffer i + 1: %c\n", buffer[i+1]);
+                // }
                 if(buffer[i+1] == '\0'){
                     current->s_one = strdup(string);
                     //printf("current->s_one: %s\n", current->s_one);
+                    current->bitSequence1 = strdup(bitSeq);
+                    //printf("current->bitSeqence: %s\n", current->bitSequence1);
                 }else if(current->one == NULL){
+                    //printf("We are creating a one node\n");
                     current->one = createHuffNode();
+                    current = current->one;
                 }else{
                     current = current->one;
                 }
             }else if (buffer[i] == '0'){
+                // printf("buffer value is 0\n");
+                // if(buffer[i+1]){
+                //     printf("buffer i + 1: %c\n", buffer[i+1]);
+                // }
                 if(buffer[i+1] == '\0'){
                     current->s_zero = strdup(string);
                     //printf("current->s_zero: %s\n", current->s_zero);
+                    current->bitSequence0 = strdup(bitSeq);
+                    //printf("current->bitSeqence: %s\n", current->bitSequence0);
                 }else if(current->zero == NULL){
+                    //printf("we are creating a 0 node\n");
                     current->zero = createHuffNode();
+                    current = current->zero;
                 }else {
                     current = current->zero;
                 }
             }
-            i++;
+           i++; 
         }
     }
+
+    //bfsPrint(root);
 
     free(buffer);
 
@@ -116,9 +203,10 @@ int main(int argc, char const *argv[])
 
     for(size_t i = 0; i < bytesRead; i++){
         //printf("hey we are in for loop\n");
-        printf("byte: %d\n", (unsigned char)diffBuffer[i]);
+        //printf("byte: %d\n", (unsigned char)diffBuffer[i]);
         for(int j = 0; j < 8; j++){
-            int singleBit = getBitFromByte(j, buffer[i]);
+            int singleBit = getBitFromByte(j, diffBuffer[i]);
+            //printf("bit: %i\n", singleBit);
             if(singleBit == 1){
                 //printf("are we in the 1 if?\n");
                 if(current->s_one != NULL){
