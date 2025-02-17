@@ -193,7 +193,7 @@ int main(int argc, char const *argv[])
     fileSize = ftell(encoded);
 
     if(fileSize < 4){
-        fprintf(stderr, "File is too small");
+        fprintf(stderr, "Error: file is not the correct size.\n");
         fclose(encoded);
         exit(1);
     }
@@ -204,6 +204,11 @@ int main(int argc, char const *argv[])
 
     //printf("bit count: %lu\n", bitCount);
     // printf("file size: %lu\n", fileSize);
+
+    if(bitCount > (fileSize*8 + 32)){
+        fprintf(stderr, "Error: Total bits = %lu, but file's size is %lu\n", bitCount, fileSize);
+        exit(1);
+    }
 
     unsigned char *diffBuffer = malloc(fileSize + 1);
 
@@ -219,12 +224,13 @@ int main(int argc, char const *argv[])
         //printf("hey we are in for loop\n");
         //printf("byte: %d\n", (unsigned char)diffBuffer[i]);
         for(int j = 0; j < 8; j++){
-            if(bitIndex > bitCount){
+            if(bitIndex >= bitCount){
                 break;
             }
             int singleBit = getBitFromByte(j, diffBuffer[i]);
-            if(current->one == NULL && current->zero == NULL && current->s_one == NULL && current->s_zero == NULL){
-                printf("Unrecognized bits\n");
+            if(current == NULL ){
+                fprintf(stderr, "Unrecognized bits\n");
+                exit(1);
             }
             //printf("bit: %i\n", singleBit);
             if(singleBit == 1){
