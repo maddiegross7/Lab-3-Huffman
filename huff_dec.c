@@ -179,10 +179,10 @@ int main(int argc, char const *argv[])
     }
 
     //bfsPrint(root);
-
+    //printf("hello");
     free(buffer);
 
-
+    
     FILE *encoded = fopen(argv[2], "rb");
 
     if(!code){
@@ -191,6 +191,20 @@ int main(int argc, char const *argv[])
 
     fseek(encoded, 0, SEEK_END);
     fileSize = ftell(encoded);
+
+    if(fileSize < 4){
+        fprintf(stderr, "File is too small");
+        fclose(encoded);
+        exit(1);
+    }
+
+    long bitCount;
+    fseek(encoded, -4, SEEK_END);
+    fread(&bitCount, sizeof(long), 1, encoded);
+
+    //printf("bit count: %lu\n", bitCount);
+    // printf("file size: %lu\n", fileSize);
+
     unsigned char *diffBuffer = malloc(fileSize + 1);
 
     rewind(encoded);
@@ -200,12 +214,18 @@ int main(int argc, char const *argv[])
 
     current = root;
     //printf("bytes read for 2nd file: %zu\n", bytesRead);
-
-    for(size_t i = 0; i < bytesRead; i++){
+    int bitIndex = 0;
+    for(long i = 0; i < fileSize; i++){
         //printf("hey we are in for loop\n");
         //printf("byte: %d\n", (unsigned char)diffBuffer[i]);
         for(int j = 0; j < 8; j++){
+            if(bitIndex > bitCount){
+                break;
+            }
             int singleBit = getBitFromByte(j, diffBuffer[i]);
+            if(current->one == NULL && current->zero == NULL && current->s_one == NULL && current->s_zero == NULL){
+                printf("Unrecognized bits\n");
+            }
             //printf("bit: %i\n", singleBit);
             if(singleBit == 1){
                 //printf("are we in the 1 if?\n");
@@ -224,7 +244,9 @@ int main(int argc, char const *argv[])
                     current = current->zero;
                 }
             }
+            bitIndex++;
         }
     }
+    //printf("\n");
     return 0;
 }
