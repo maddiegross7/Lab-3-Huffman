@@ -1,3 +1,6 @@
+//Lab 3: Huffman Decoding
+//Madelyn Gross
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,10 +12,9 @@ typedef struct huff_node {
     struct huff_node *one;
     char *s_zero;
     char *s_one;
-    char *bitSequence0;
-    char *bitSequence1;
 } Huff_node;
 
+//just making an initialization function so that I do not have to keep initializing
 Huff_node* createHuffNode(){
     Huff_node *newNode = malloc(sizeof(Huff_node));
 
@@ -20,154 +22,97 @@ Huff_node* createHuffNode(){
     newNode->zero = NULL;
     newNode->s_one = NULL;
     newNode->s_zero = NULL;
-    newNode->bitSequence0 = NULL;
-    newNode->bitSequence1 = NULL;
 
     return newNode;
 }
 
+//doing the math to get a single bit from a byte
 int getBitFromByte(int pos, unsigned char character){
     int bit = ((character >> pos) & 1);
-    //printf("bit: %i\n", bit);
     return bit;
 }
 
-
-// Queue structure for BFS
-typedef struct queue_node {
-    Huff_node *node;
-    struct queue_node *next;
-} QueueNode;
-
-typedef struct {
-    QueueNode *front;
-    QueueNode *rear;
-} Queue;
-
-void enqueue(Queue *q, Huff_node *node) {
-    QueueNode *newNode = malloc(sizeof(QueueNode));
-    newNode->node = node;
-    newNode->next = NULL;
-    if (q->rear) {
-        q->rear->next = newNode;
-    } else {
-        q->front = newNode;
+//this is freeing all of the memory within the tree recursively if they exist
+void freeHuffNode(Huff_node *huffNode){
+    if(huffNode == NULL){
+        return;
     }
-    q->rear = newNode;
-}
 
-Huff_node *dequeue(Queue *q) {
-    if (!q->front) return NULL;
-    QueueNode *temp = q->front;
-    Huff_node *node = temp->node;
-    q->front = q->front->next;
-    if (!q->front) q->rear = NULL;
-    free(temp);
-    return node;
-}
+    freeHuffNode(huffNode->one);
+    freeHuffNode(huffNode->zero);
 
-int isQueueEmpty(Queue *q) {
-    return q->front == NULL;
-}
-
-void bfsPrint(Huff_node *root) {
-    if (!root) return;
-    Queue q = {NULL, NULL};
-    enqueue(&q, root);
-    while (!isQueueEmpty(&q)) {
-        Huff_node *current = dequeue(&q);
-        printf("Node at %p\n", (void*)current);
-        if (current->s_zero) printf("  s_zero: %s, bitSequence:%s\n", current->s_zero, current->bitSequence0);
-        if (current->s_one) printf("  s_one: %s, bitSequence:%s\n", current->s_one, current->bitSequence1);
-        if (current->zero) {
-            printf("  Has zero child\n");
-            enqueue(&q, current->zero);
-        }
-        if (current->one) {
-            printf("  Has one child\n");
-            enqueue(&q, current->one);
-        }
+    if(huffNode->s_one){
+        free(huffNode->s_one);
     }
+    if(huffNode->s_zero){
+        free(huffNode->s_zero);
+    }
+    
+    free(huffNode);
 }
-
 
 int main(int argc, char const *argv[])
 {
+    //ensure the arguments are as expected
     if(argc != 3){
         fprintf(stderr, "you do not have the correct number of arguments");
+        exit(1);
     }
-
+    //open file and confirming that it has been opened correctly, opeing as a normal text file with the -r
     FILE *code = fopen(argv[1], "r");
 
     if(!code){
         fprintf(stderr, "Error opening file: %s", argv[1]);
+        exit(1);
     }
 
+    //looking for the end of the file to determine the size we need to allocate for the buffer
     fseek(code, 0, SEEK_END);
     long fileSize = ftell(code);
     char *buffer = malloc(fileSize + 1);
-
+    //we have read it once so now we are at the end of the file this will bring us back to the begining
     rewind(code);
 
     size_t bytesRead = fread(buffer, 1, fileSize, code);
-
-    //maybe error check if file is big enough
-
+    //closing the file
+    fclose(code);
+    //the string that can be read in can be at most this long so allocating that much memory
     char string[10001] = "";
-    char bitSeq[10001] = "";
 
     Huff_node *root = createHuffNode();
-
+    //beginning of our tree!!
     Huff_node *current = root;
 
     for(size_t i = 0; i < bytesRead; i++){
         current = root;
-        
+        //I will read until the first null terminator and add those characters to the end of my string variable
+        //I am moving through the buffer with each iteration
         int stringSizeCount = 0;
         while(buffer[i] != '\0'){
-            //printf("buffer[i] %s\n", buffer[i]);
             string[stringSizeCount] = buffer[i];
             stringSizeCount++;
             i++;
         }
         string[stringSizeCount] = '\0';
         i++;
-
-        int bitSeqSizeCount = 0;
+        //This is for the binary code I am again going until the next null terminator, I am treating them as a pair
+        //and I am also adding to my huff trie
         while(buffer[i] != '\0'){
-            //printf("buffer[i] %c\n", buffer[i]);
-            bitSeq[bitSeqSizeCount] = buffer[i];
-            bitSeqSizeCount++;
-            bitSeq[bitSeqSizeCount] = '\0';
             if(buffer[i] == '1'){
-                // printf("buffer value is 1\n");
-                // if(buffer[i+1]){
-                //     printf("buffer i + 1: %c\n", buffer[i+1]);
-                // }
+                //if the next character is a null terminator instead of creating a new node I will set this 
+                //nodes string for the corresponding number to the string that I read in earlier
                 if(buffer[i+1] == '\0'){
                     current->s_one = strdup(string);
-                    //printf("current->s_one: %s\n", current->s_one);
-                    current->bitSequence1 = strdup(bitSeq);
-                    //printf("current->bitSeqence: %s\n", current->bitSequence1);
                 }else if(current->one == NULL){
-                    //printf("We are creating a one node\n");
                     current->one = createHuffNode();
                     current = current->one;
                 }else{
                     current = current->one;
                 }
             }else if (buffer[i] == '0'){
-                // printf("buffer value is 0\n");
-                // if(buffer[i+1]){
-                //     printf("buffer i + 1: %c\n", buffer[i+1]);
-                // }
                 if(buffer[i+1] == '\0'){
                     current->s_zero = strdup(string);
-                    //printf("current->s_zero: %s\n", current->s_zero);
-                    current->bitSequence0 = strdup(bitSeq);
-                    //printf("current->bitSeqence: %s\n", current->bitSequence0);
                 }else if(current->zero == NULL){
-                    //printf("we are creating a 0 node\n");
                     current->zero = createHuffNode();
                     current = current->zero;
                 }else {
@@ -177,39 +122,37 @@ int main(int argc, char const *argv[])
            i++; 
         }
     }
-
-    //bfsPrint(root);
-    //printf("hello");
+    //freeing the first buffer
     free(buffer);
 
-    
+    //opeing the second file
     FILE *encoded = fopen(argv[2], "rb");
 
-    if(!code){
+    if(!encoded){
         fprintf(stderr, "Error opening file: %s", argv[2]);
+        exit(1);
     }
 
     fseek(encoded, 0, SEEK_END);
     fileSize = ftell(encoded);
-
+    //I want to check to make sure that this file is at least big enough to have the data we need in it
     if(fileSize < 4){
         fprintf(stderr, "Error: file is not the correct size.\n");
         fclose(encoded);
         exit(1);
     }
 
+    //I need to figure out how many bits I can expect to read from the file
     long bitCount;
     fseek(encoded, -4, SEEK_END);
     fread(&bitCount, sizeof(long), 1, encoded);
 
-    //printf("bit count: %lu\n", bitCount);
-    // printf("file size: %lu\n", fileSize);
 
     if(bitCount > (fileSize*8 + 32)){
         fprintf(stderr, "Error: Total bits = %lu, but file's size is %lu\n", bitCount, fileSize);
         exit(1);
     }
-
+    //I could have used the same buffer but I wanted to separate just for myself to ensure I treat them correctly
     unsigned char *diffBuffer = malloc(fileSize + 1);
 
     rewind(encoded);
@@ -217,24 +160,26 @@ int main(int argc, char const *argv[])
     bytesRead = fread(diffBuffer, 1, fileSize, encoded);
     diffBuffer[bytesRead] = '\0';
 
+    fclose(encoded);
+
     current = root;
-    //printf("bytes read for 2nd file: %zu\n", bytesRead);
     int bitIndex = 0;
+    //here i am just navigating through the tree as I read in bytes and then moving through each bit within
+    //that byte if I get to a word I immediately print it out
     for(long i = 0; i < fileSize; i++){
-        //printf("hey we are in for loop\n");
-        //printf("byte: %d\n", (unsigned char)diffBuffer[i]);
         for(int j = 0; j < 8; j++){
             if(bitIndex >= bitCount){
                 break;
             }
             int singleBit = getBitFromByte(j, diffBuffer[i]);
+            //if current is NULL that means that at some point we received a bit sequence that we did not have set 
+            //up so when this happens we print out an error and exit the program
             if(current == NULL ){
                 fprintf(stderr, "Unrecognized bits\n");
                 exit(1);
             }
-            //printf("bit: %i\n", singleBit);
+            //just moving through the tree some more
             if(singleBit == 1){
-                //printf("are we in the 1 if?\n");
                 if(current->s_one != NULL){
                     printf("%s", current->s_one);
                     current = root;
@@ -242,7 +187,6 @@ int main(int argc, char const *argv[])
                     current = current->one;
                 }
             }else if(singleBit == 0){
-                //printf("are we in the 0 if?\n");
                 if(current->s_zero != NULL){
                     printf("%s", current->s_zero);
                     current = root;
@@ -253,6 +197,9 @@ int main(int argc, char const *argv[])
             bitIndex++;
         }
     }
-    //printf("\n");
+    //freeing all the nodes and the buffer that we allocated
+    freeHuffNode(root);
+    free(diffBuffer);
+
     return 0;
 }
